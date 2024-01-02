@@ -1,7 +1,7 @@
 use std::f32::consts::*;
 
-use bevy::{input::mouse::MouseMotion, math::Vec3Swizzles, prelude::*, transform::commands};
-use bevy_rapier3d::{control, prelude::*};
+use bevy::{input::mouse::MouseMotion, math::Vec3Swizzles, prelude::*};
+use bevy_rapier3d::prelude::*;
 
 /// Manages the FPS controllers. Executes in `PreUpdate`, after bevy's internal
 /// input processing is finished.
