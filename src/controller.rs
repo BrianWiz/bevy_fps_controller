@@ -93,11 +93,13 @@ pub struct FpsControllerPlayerId {
 pub struct FpsControllerInputState {
     pub pitch: f32,
     pub yaw: f32,
+    pub next_input_id: u64,
 }
 
 #[derive(Event, Default, Clone)]
 pub struct FpsControllerInput {
     pub owner_id: u64,
+    pub input_id: u64,
     pub fly: bool,
     pub sprint: bool,
     pub jump: bool,
@@ -201,11 +203,7 @@ pub struct FpsControllerState {
     pub ground_tick: u8,
     pub grounded: bool,
     pub height: f32,
-    pub movement: Vec3,
-    pub flying: bool,
-    pub sprinting: bool,
-    pub jumping: bool,
-    pub crouching: bool,
+    pub last_processed_input: FpsControllerInput,
 }
 
 impl Default for FpsControllerState {
@@ -218,11 +216,7 @@ impl Default for FpsControllerState {
             ground_tick: 0,
             grounded: false,
             height: 1.5,
-            movement: Vec3::ZERO,
-            flying: false,
-            sprinting: false,
-            jumping: false,
-            crouching: false,
+            last_processed_input: FpsControllerInput::default(),
         }
     }
 }
@@ -250,6 +244,7 @@ pub fn fps_controller_input(
 
     let mut new_input = FpsControllerInput {
         owner_id: player_id.id,
+        input_id: input_state.next_input_id,
         fly: false,
         sprint: false,
         jump: false,
@@ -258,6 +253,8 @@ pub fn fps_controller_input(
         yaw: input_state.yaw,
         movement: Vec3::ZERO,
     };
+
+    input_state.next_input_id += 1;
 
     let mut mouse_delta = Vec2::ZERO;
     for mouse_event in mouse_events.read() {
@@ -371,13 +368,14 @@ pub fn fps_controller_server_move_others(
         if inputs.len() == 0 {
             let input = FpsControllerInput {
                 owner_id: owner_id.id,
-                fly: controller.flying,
-                sprint: controller.sprinting,
-                jump: controller.jumping,
-                crouch: controller.crouching,
-                pitch: controller.pitch,
-                yaw: controller.yaw,
-                movement: controller.movement,
+                input_id: controller.last_processed_input.input_id,
+                fly: controller.last_processed_input.fly,
+                sprint: controller.last_processed_input.sprint,
+                jump: controller.last_processed_input.jump,
+                crouch: controller.last_processed_input.crouch,
+                pitch: controller.last_processed_input.pitch,
+                yaw: controller.last_processed_input.yaw,
+                movement: controller.last_processed_input.movement,
             };
             move_controller(
                 dt,
@@ -421,13 +419,9 @@ pub fn move_controller(
 ) {
     let dt = delta_seconds;
 
-    controller.flying = input.fly;
-    controller.sprinting = input.sprint;
-    controller.jumping = input.jump;
-    controller.crouching = input.crouch;
+    controller.last_processed_input = input.clone();
     controller.pitch = input.pitch;
     controller.yaw = input.yaw;
-    controller.movement = input.movement;
 
     if input.fly {
         controller.move_mode = match controller.move_mode {
